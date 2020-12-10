@@ -25,7 +25,7 @@ setup(
         'games'
     ],
     url='https://github.com/gregsotiropoulos/cellular_automata',
-    packages='cellular_automata', #find_packages(),
+    packages=find_packages(),
     classifiers=[
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.6',

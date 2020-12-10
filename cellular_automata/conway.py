@@ -30,6 +30,7 @@ the ``Conway`` class.
 """
 
 from operator import attrgetter
+from pathlib import Path
 from types import SimpleNamespace as Sns
 from itertools import repeat, islice
 from time import perf_counter as t, strftime
@@ -47,16 +48,14 @@ import pickle
 # non-stdlib modules
 import numpy as np
 from numpy import random as npr, uint8 as ui8, intp, ndarray as nda
-from scipy.signal import convolve2d
-from scipy.ndimage import convolve, uniform_filter
+from scipy.ndimage import convolve
 from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation as FuncAni
 from matplotlib import backend_bases as mpl_bb
 from matplotlib import backend_tools as mpl_tools
 import keyboard as kb
 
-# modules in same project
-import conway_patterns
+import cellular_automata.conway_patterns as patterns
 
 # logger = logging.getLogger(__name__)
 __docformat__ = 'reStructuredText'
@@ -255,7 +254,7 @@ class Conway:
             # array) would be placed on an empty grid (another Numpy array of
             # zeros of shape ``opts.shape``). Note that f() must return an
             # array that is no larger in either dimension than the grid.
-            init_pattern=(conway_patterns.random_symmetric_quad, 200, 1),
+            init_pattern=(patterns.random_symmetric_quad, 200, 1),
 
             # file name mask (for input in time.strftime) for save operations
             # in Conway (saving the entire instance data) or ConwayGui
@@ -934,7 +933,6 @@ class ConwayGui:
         # pass the rest of the keywords to the Conway constructor
         opts_dic.update((k, kwa.pop(k)) for k in opts_dic if k in kwa)
         conway = Conway(**kwa)
-
         self._figure = plt.figure(f'Game of Life', frameon=False)
         self._image = plt.imshow(
             conway[0], cmap='gray', aspect='equal', animated=True
@@ -949,14 +947,21 @@ class ConwayGui:
         # depending on your desktop configuration, number of monitors and OS
         fig_h = int(window.winfo_screenheight() * 0.9)
         window.geometry(f'{fig_h}x{fig_h}+{x}+{y}')
-        icon = PhotoImage(file='glider.png', master=window)
+        iconfile = str(Path(Path(__file__).parent, 'glider.png'))
+        icon = PhotoImage(file=iconfile, master=window)
         window.tk.call('wm', 'iconphoto', window._w, icon)
+
         self._events = ConwayGuiEvents(self)
 
         # this will store the selection, in the form of a NumPy array,
         # made by dragging the mouse while holding down the Shift key
         self._selection = None
         self._new_animation(conway)
+
+        # This is necessary when running the app outside of IPython. Even
+        # interactive mode needs it. It also needs to be at the end (after
+        # all other matplotlib code has been called)
+        plt.show()
 
     def _new_animation(self, conway):
         """
@@ -1104,11 +1109,11 @@ def main():
     :return: A ConwayGui instance.
     """
     pidx = 0  # pick profile #1 from conway_patterns.profiles
-    profile = conway_patterns.profiles[pidx]
-    profile = dict(
-        shape=(15, 15),
-        init_pattern=(conway_patterns.test2, )
-    )
+    profile = patterns.profiles[pidx]
+    # profile = dict(
+    #     shape=(15, 15),
+    #     init_pattern=(patterns.small_test, )
+    # )
     # The GUI will open in a paused state. Hit the space key to start the
     # animation. Alternatively, start_paused can be set to False (the default).
     return ConwayGui(**profile, start_paused=True)

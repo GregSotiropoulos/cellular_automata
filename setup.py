@@ -38,13 +38,15 @@ setup(
     ],
     python_requires='>=3.6',
     install_requires=[
-        'numpy',
+        'numpy != 1.19.4',
         'scipy',
         'matplotlib',
         'keyboard'
     ],
     package_data={
-        'application_icon': ['glider.png']
+        '': ['LICENSE', 'README.md'],
+        # package name : [filename1, filename2, ...]
+        'cellular_automata': ['glider.png']
     },
     project_urls={
         'Source': 'https://github.com/gregsotiropoulos/cellular_automata'

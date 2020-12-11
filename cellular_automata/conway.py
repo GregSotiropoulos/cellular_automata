@@ -9,8 +9,8 @@
 
 Cellular Automata (CA) application. Conway's Game of Life is the "prototypical"
 CA and is supported by default, although other rule systems can be easily
-incorporated (see the ``ConwayFilters`` documentation). The module can be used
-to compute the evolution of a grid from some initial configuration.
+incorporated (see the :class:`ConwayFilters` documentation). The module can be
+used to compute the evolution of a grid from some initial configuration.
 
 Grids are NumPy 2D byte arrays that can only have 0s and 1s, representing
 dead and live cells, respectively. Note that grids are "closed", wrapping
@@ -20,13 +20,13 @@ left/right. Essentially the CA world lives on a torus.
 
 When run, the application presents a GUI that allows one to use mouse and
 keyboard shortcuts to view the evolving grid, pause it, draw or delete new
-cells, save the current grid as an image, pickle the current ``Conway``
-instance to save the entire simulation and more. See the ``ConwayGui``
+cells, save the current grid as an image, pickle the current :class:`Conway`
+instance to save the entire simulation and more. See the :class:`ConwayGui`
 documentation for details. In the GUI, you can press 'h' to bring up a help
 dialog that lists the available keyboard and mouse shortcuts.
 
 To use the module in client code without the GUI, it is sufficient to import
-the ``Conway`` class.
+:class:`Conway`.
 """
 
 from operator import attrgetter
@@ -49,18 +49,25 @@ import pickle
 import numpy as np
 from numpy import random as npr, uint8 as ui8, intp, ndarray as nda
 from scipy.ndimage import convolve
-from matplotlib import pyplot as plt
-from matplotlib.animation import FuncAnimation as FuncAni
-from matplotlib import backend_bases as mpl_bb
-from matplotlib import backend_tools as mpl_tools
 import keyboard as kb
+import matplotlib as mpl
+# I know the linter doesn't like this but apparently use() has to be called
+# before importing pyplot -- see https://stackoverflow.com/a/56320309/8441268
+mpl.use('TkAgg')
+from matplotlib import (
+    pyplot as plt,
+    backend_bases as mpl_bb,
+    backend_tools as mpl_tools,
+)
+from matplotlib.animation import FuncAnimation as FuncAni
 
+# package module
 import cellular_automata.conway_patterns as patterns
 
 # logger = logging.getLogger(__name__)
 __docformat__ = 'reStructuredText'
 __author__ = 'Greg Sotiropoulos <greg.sotiropoulos@gmail.com>'
-__version__ = 1, 0, 0
+__version__ = 1, 0, 1
 __all__ = 'Conway', 'ConwayGui'
 
 
@@ -71,15 +78,15 @@ class ConwayFilters:
     contains two built-in filters (which you cannot delete). User-defined
     filters can be added/deleted that implement different CA update rules.
 
-    The filters contained in ``ConwayFilters`` instances are 2-tuples. In such
-    a tuple ``p``, ``p[0]`` is the 2D convolution array (typically 3x3) and
-    ``p[1]`` is a sequence of numbers. At each time-step, the current grid is
-    first filtered (convolved) with ``p[0]``. The grid is then updated as
+    The filters contained in :class:`ConwayFilters` instances are 2-tuples. In
+    such a tuple ``p``, ``p[0]`` is the 2D convolution array (typically 3x3)
+    and ``p[1]`` is a sequence of numbers. At each time-step, the current grid
+    is first filtered (convolved) with ``p[0]``. The grid is then updated as
     follows (in pseudo-Python):
 
         ``grid[x, y] = filtered_grid[x, y] in p[1]``
 
-    for every (x, y) coordinate. This results in a new binary-valued grid and
+    for every (x, y) coordinate. This results in a new binary grid and
     the process repeats.
     """
     _built_in = 'conway', 'conway5'
@@ -138,7 +145,7 @@ class Conway:
     The core class of the module. It represents a cellular automaton (CA)
     simulation as a sequence of grids (two-dimensional NumPy uint8 arrays).
 
-    Conway instances implement a read-only subset of both the Sequence and
+    ``Conway`` instances implement a read-only subset of both the Sequence and
     the Mapping interface. This means that grids in a simulation can be
     accessed both with a numeric or slice index and a 'grid' index.
         - In the case of a numeric index, it is straightforward: ``inst[i]``
@@ -157,7 +164,7 @@ class Conway:
     valid history (ie that each frame comes from the immediately previous frame
     through the application of the CA rule defined in the current Filter).
 
-    The following are all valid ways of indexing a Conway instance:
+    The following are all valid ways of indexing a ``Conway`` instance:
 
     >>> cw = Conway()
     >>> i, grid = cw.get_grid(5)
@@ -407,23 +414,30 @@ class Conway:
         """
         return np.packbits(grid).tobytes()
 
-    def unpack(self, grid):
+    def unpack(self, packed_grid):
         """
         The inverse operation of Conway.pack(). Unlike the latter, this is an
-        instance method as it depends on the shape of
-        :param grid:
-        :return:
+        instance method as it depends on state (the shape of the unpacked grid)
+
+        :param packed_grid: A ``bytes`` representation of a packed grid.
+        :return: The grid as it is normally -- a 2D NumPy uint8 array.
         """
         h, w = self._shape
-        grid = np.frombuffer(grid, dtype=ui8)
-        return np.unpackbits(grid)[:h*w].reshape(h, w)
+        packed_grid = np.frombuffer(packed_grid, dtype=ui8)
+        return np.unpackbits(packed_grid)[:h*w].reshape(h, w)
 
     @property
     def dic(self):
         """
         A dictionary of computed grids, serving as a cache (and a memo, for
-        detecting a possible cycle, ie a grid sequence that
-        :return:
+        detecting a possible cycle, ie a grid sequence that repeats forever).
+
+        Keys in this dictionary are the ``bytes`` representations of (packed)
+        grids. Values are just ordinals, starting from zero (you can think of
+        them as number of generations). This all works because as of Python
+        3.6, ``dict``s are ordered.
+
+        :return: The dictionary instance.
         """
         return self._dic
 
@@ -528,21 +542,25 @@ class ConwayGuiEvents:
         self.paused_grid = self.imgrid.copy() if self.paused else None
 
         # mouse events setup
-        self.mouse = m = Sns()
-        md = vars(m)
-        md.update(
-            (btn_name[0], getattr(mpl_bb.MouseButton, btn_name))
-            for btn_name in ('RIGHT', 'LEFT', 'MIDDLE', 'FORWARD', 'BACK')
-        )
-        # mouse keys for handy access as m.L, m.R etc
-        m.ks = np.array((*md.values(),))
-        m.down = m.ks * 0
+
+        # set up a namespace where m.R returns the code for the Right mouse
+        # button, m.L for Left etc
+        try:
+            btns = mpl_bb.MouseButton.__members__
+            self.mouse = m = Sns(**{name[0]: int(btns[name]) for name in btns})
+        except AttributeError:
+            # if there is an older matplotlib version that doesn't have the
+            # MouseButton attribute (which is a simple IntEnum)
+            self.mouse = m = Sns(L=1, M=2, R=3, B=8, F=9)
+
+        # tracks which buttons are pressed
+        m.down = np.zeros(len(vars(m)), dtype=ui8)
 
         # placeholder for selections using the mouse
         # (eg to copy part of the grid)
         m.selection = np.zeros((2, 2), dtype=intp) - 1
 
-        # event callbacks
+        # mouse and keyboard event callbacks
         cb = dict(
             button_press=self._on_mouse_down,
             button_release=self._on_mouse_up,
@@ -581,11 +599,12 @@ class ConwayGuiEvents:
     Wheel down:		decrease fps
     Left click:		erase pixel *, **
     Right click:		paint pixel *, **
-    Shift + mouse move:	select and copy rectangle
+    Shift + mouse move:	select and copy rectangle ***
     
     *	only when the animation is paused
     **	you can keep the left/right mouse button pressed 
     	while moving the mouse to erase/paint en masse
+    ***	can be accessed via gui_inst.selection()
     """
 
     @property
@@ -636,11 +655,11 @@ class ConwayGuiEvents:
         :param e: The mouse event, an instance of mpl.backend_bases.MouseEvent
         :return: A 2-element NumPy vector with the coordinates.
         """
-        xy = e.xdata, e.ydata
+        yx = e.ydata, e.xdata
         return (
-            np.zeros(2, dtype=intp)-1
-            if None in xy else
-            np.minimum(np.round(xy) + 1, self.imgrid.shape).astype(intp) - 1
+            np.full(2, -1, dtype=intp)
+            if None in yx else
+            np.minimum(np.floor(yx), self.imgrid.shape).astype(intp)
         )
 
     # event callbacks
@@ -651,13 +670,13 @@ class ConwayGuiEvents:
         if kb.is_pressed('left shift'):
             if btn == m.L:
                 ji = self._mouse_event2ji(e)
-                if np.all(ji >= 0):
+                if (ji >= 0).all():
                     m.selection[0, :] = ji
         self._on_mouse_move(e)
 
     def _on_mouse_up(self, e):
         m, btn = self.mouse, e.button
-        m.down[:], sel = btn == m.down, m.selection
+        m.down[:], sel = (btn == m.down), m.selection
         if btn == m.L:
             if kb.is_pressed('left shift'):
                 sel[1, :] = self._mouse_event2ji(e) + 1
@@ -689,7 +708,7 @@ class ConwayGuiEvents:
     def _on_mouse_move(self, e):
         if not kb.is_pressed('left shift'):
             m, btn = self.mouse, e.button
-            j, i = self._mouse_event2ji(e).flatten()
+            i, j = self._mouse_event2ji(e).flatten()
             lr = m.L, m.R
             if btn in lr and self.paused:
                 # moving the mouse while paused:
@@ -702,8 +721,7 @@ class ConwayGuiEvents:
                 self.canvas.draw_idle()
 
     def _on_key_press(self, e):
-        gui, grid, paused, key = \
-            self.gui, self.imgrid, self.paused, e.key.lower()
+        gui, grid, key = self.gui, self.imgrid, e.key.lower()
 
         if key == 'h':
             tk_showinfo(
@@ -717,7 +735,7 @@ class ConwayGuiEvents:
 
         # clear grid (kill all cells)
         elif key == 'delete':
-            if paused:
+            if self.paused:
                 self.image.set_data(np.zeros_like(grid))
 
         elif key == 'l':
@@ -729,16 +747,13 @@ class ConwayGuiEvents:
                 filetypes=(('Conway pickle files', '*.conway'), )
             )
             if open_fn:
-                gui._conway = cw = Conway.fromfile(open_fn)
-                self.image.set_data(cw[0])
-                if not paused:
-                    gui._new_animation(cw)
+                self._load_new_grid(Conway.fromfile(open_fn))
 
         # go back to the initial frame
         elif key == 'i':
             grid, gui._frame = gui.conway[0], 0
             self.image.set_data(grid)
-            if paused:
+            if self.paused:
                 self.paused_grid = grid.copy()
 
         # open image file
@@ -761,9 +776,7 @@ class ConwayGuiEvents:
                     np.mean(new_grid[:, :, :3], axis=2) > 0.5
                 ).astype(ui8)
                 try:
-                    self.image.set_data(new_grid)
-                    if not paused:
-                        gui._new_animation(Conway(new_grid))
+                    self._load_new_grid(Conway(new_grid))
                 except RuntimeError(e):
                     tk_showerror(
                         parent=w,
@@ -788,7 +801,7 @@ class ConwayGuiEvents:
 
         # move back/forward a generation
         elif key in ('left', 'right'):
-            if paused:
+            if self.paused:
                 gui = self.gui
                 sense = 2*len(key) - 9  # left -> -1, right -> 1
                 frame = gui._frame + sense
@@ -799,6 +812,15 @@ class ConwayGuiEvents:
                     self.image.set_data(grid)
 
         self.canvas.draw_idle()
+
+    def _load_new_grid(self, conway):
+        img = self.image
+        img.set_data(conway[0])
+        h, w = conway[0].shape
+        # set extent again as image may have different dimensions
+        img.set_extent((0, w, h, 0))
+        if not self.paused:
+            self.gui._new_animation(conway)
 
     def toggle_pause(self):
         """
@@ -815,16 +837,10 @@ class ConwayGuiEvents:
             self.paused = True
             self.paused_grid = self.imgrid.copy()
 
-    def _on_change(self, ignore_equal=False):
-        """
-
-        :param ignore_equal: Start a new animation even if there have been no
-            user edits in the grid while paused.
-        """
+    def _on_change(self):
         imgrid, gui = self.imgrid, self.gui
         try:
             if (
-                ignore_equal or
                 not np.array_equal(self.paused_grid, imgrid) or
                 imgrid not in gui.conway
             ):
@@ -933,22 +949,23 @@ class ConwayGui:
         # pass the rest of the keywords to the Conway constructor
         opts_dic.update((k, kwa.pop(k)) for k in opts_dic if k in kwa)
         conway = Conway(**kwa)
+
         self._figure = plt.figure(f'Game of Life', frameon=False)
-        self._image = plt.imshow(
+        self._image = img = plt.imshow(
             conway[0], cmap='gray', aspect='equal', animated=True
         )
+        h, w = conway._shape
+        img.set_extent((0, w, h, 0))
         for cmd in 'grid grid_minor save xscale yscale zoom'.split():
             plt.rcParams['keymap.' + cmd].clear()
         plt.axis('off')
         plt.tight_layout(pad=0)
         self._window = window = plt.get_current_fig_manager().window
-        x = y = 0
-        # quick and dirty figure height calculation -- it could be quite off
-        # depending on your desktop configuration, number of monitors and OS
-        fig_h = int(window.winfo_screenheight() * 0.9)
-        window.geometry(f'{fig_h}x{fig_h}+{x}+{y}')
-        iconfile = str(Path(Path(__file__).parent, 'glider.png'))
-        icon = PhotoImage(file=iconfile, master=window)
+
+        # application window icon
+        iconfile = Path(Path(__file__).parent, 'glider.png')
+        if iconfile.exists():
+            icon = PhotoImage(file=str(iconfile), master=window)
         window.tk.call('wm', 'iconphoto', window._w, icon)
 
         self._events = ConwayGuiEvents(self)
@@ -962,6 +979,14 @@ class ConwayGui:
         # interactive mode needs it. It also needs to be at the end (after
         # all other matplotlib code has been called)
         plt.show()
+
+        # quick and dirty figure height calculation -- it could be quite off
+        # depending on your desktop configuration, number of monitors and OS
+        scr_h, scr_w = window.winfo_screenheight(), window.winfo_screenwidth()
+        fig_h = int(scr_h * 0.9)
+        fig_w = int(min(fig_h * w / h, scr_w * 0.9))
+        fig_x, fig_y = (scr_w - fig_w)//2, 0
+        window.geometry(f'{fig_w}x{fig_h}+{fig_x}+{fig_y}')
 
     def _new_animation(self, conway):
         """
@@ -1104,16 +1129,12 @@ class ConwayGui:
 
 def main():
     """
-    Called when the module is run. Small wrapper for ConwayGui()
+    Called when the module is run. Small wrapper for ConwayGui().
 
     :return: A ConwayGui instance.
     """
-    pidx = 0  # pick profile #1 from conway_patterns.profiles
+    pidx = 1  # pick profile #1 from conway_patterns.profiles
     profile = patterns.profiles[pidx]
-    # profile = dict(
-    #     shape=(15, 15),
-    #     init_pattern=(patterns.small_test, )
-    # )
     # The GUI will open in a paused state. Hit the space key to start the
     # animation. Alternatively, start_paused can be set to False (the default).
     return ConwayGui(**profile, start_paused=True)

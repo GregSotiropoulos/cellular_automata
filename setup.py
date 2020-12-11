@@ -10,7 +10,7 @@ with open(here/'README.md') as fh:
 
 setup(
     name='cellular_automata',
-    version='1.0.0',
+    version='1.0.1',
     author='Greg Sotiropoulos',
     author_email='greg.sotiropoulos@gmail.com',
     description='Cellular Automata (Game of Life) simulator and GUI',

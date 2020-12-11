@@ -351,46 +351,49 @@ profiles = (
         seed=1911858326,
     ),
     dict(  # 1
+        # very cool -- it evolves membrane receptors at the end! (at the steady
+        # state, which is a cycle of T=2)
         shape=(512, ) * 2,
-        init_pattern=(rsq, 200, 1),
-        seed=1078576960,
+        init_pattern=(rsq, 216, 1),
     ),
     dict(  # 2
-        shape=(512, ) * 2,
-        init_pattern=(rsq, 400, 1),
-        seed=1078576960,
+        # has that T=30 oscillator at the steady state
+        shape=(512,) * 2,
+        init_pattern=(rsq, 200, 1),
     ),
     dict(  # 3
-        # this one has a T=30 at the end
+        shape=(512, ) * 2,
+        init_pattern=(rsq, 510, 1),
+        seed=1078576960,
+    ),
+    dict(  # 4
         shape=(128*7, ) * 2,
         init_pattern=(rsd3, 512+17*8, 4),  # 512+2*8, 12-14*8 !!
         # seed=952878327,
     ),
-    dict(  # 4
-        # this one has a T=30 at the end
+    dict(  # 5
         shape=(128*7, ) * 2,
         init_pattern=(rsd3, 512 + 19 * 8, 4),  # 512+2*8, 12-14*8 !!
         # seed=952878327,
     ),
-    dict(  # 5
-        # this too has a T=30 at the end
+    dict(  # 6
         shape=(128*7, ) * 2,
         init_pattern=(rsd3, 512 + 48 * 8, 8),  # 512+2*8, 12-14*8 !!
         # seed=952878327,
     ),
-    dict(  # 6
+    dict(  # 7
         # so far 19-22 are great!
         shape=(128*7, ) * 2,
         init_pattern=(rsd3, 512 + 58 * 8, 4),  # 512+2*8, 12-14*8 !!
         # seed=952878327,
     ),
-    dict(  # 7
+    dict(  # 8
         # great, and 9600 gens till equilibrium!
         shape=(128*11, ) * 2,
         init_pattern=(rsd3, 1 << 10, 2),  # 512+2*8, 12-14*8 !!
         # seed=952878327,
     ),
-    dict(  # 8
+    dict(  # 9
         # another T=30 and great!
         shape=(128*11, ) * 2,
         # good: 512/4/10
@@ -400,7 +403,7 @@ profiles = (
         init_pattern=(rsd3, 512*2, 1, 68),
         # seed=952878327,
     ),
-    dict(   # 9
+    dict(   # 10
         # Maybe my fav so far
         shape=(512, ) * 2,
         init_pattern=(rsd3, 1460, 12, 10),  # 512+2*8, 12-14*8 !!

@@ -938,7 +938,7 @@ class ConwayGui:
 
         :param kwa: Keyword arguments of the same name as those in
             ``ConwayGui.default_options()`` are used to customize some aspects
-            of the GUI. The rest of the keywords are passed to Conway()
+            of the GUI. The rest of the keywords are passed to ``Conway()``
         """
         self._options = opts = self.default_options()
         ani_opts = opts.animation

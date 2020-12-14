@@ -330,7 +330,8 @@ class Conway:
         if opts.seed is not None:
             npr.seed(opts.seed)
 
-        # Initial grid. If there is at least one (non-keyword) argument
+        # if there is at least one (non-keyword) argument, it must be either a
+        # NumPy array or another Conway instance.
         if args:
             a = args[0]
             init_grid = (

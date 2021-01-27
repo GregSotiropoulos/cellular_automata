@@ -12,12 +12,14 @@ CA and is supported by default, although other rule systems can be easily
 incorporated (see the :class:`ConwayFilters` documentation). The module can be
 used to compute the evolution of a grid from some initial configuration.
 
+|
 Grids are NumPy 2D byte arrays that can only have 0s and 1s, representing
 dead and live cells, respectively. Note that grids are "closed", wrapping
 around in both dimensions. Thus what is south of the bottom row is the top row
 (and what is north of the top row is the bottom row), and same goes for
 left/right. Essentially the CA world lives on a torus.
 
+|
 When run, the application presents a GUI that allows one to use mouse and
 keyboard shortcuts to view the evolving grid, pause it, draw or delete new
 cells, save the current grid as an image, pickle the current :class:`Conway`
@@ -25,6 +27,7 @@ instance to save the entire simulation and more. See the :class:`ConwayGui`
 documentation for details. In the GUI, you can press 'h' to bring up a help
 dialog that lists the available keyboard and mouse shortcuts.
 
+|
 To use the module in client code without the GUI, it is sufficient to import
 :class:`Conway`.
 """
@@ -1130,7 +1133,7 @@ class ConwayGui:
 
 def main():
     """
-    Called when the module is run. Small wrapper for ConwayGui().
+    Called when the module is run. Small wrapper for ``ConwayGui()``.
 
     :return: A ConwayGui instance.
     """
